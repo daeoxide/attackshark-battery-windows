@@ -18,10 +18,9 @@ sys.path.insert(0, ROOT)
 from attackshark_battery.hidread import ReadOnlyHid, enumerate_interfaces  # noqa: E402
 from attackshark_battery.protocol import parse  # noqa: E402
 
-IDS = [(0x1D57, 0xFA60), (0x1D57, 0xFA55), (0x1D57, 0x2155), (0x3554, 0xFA09)]
+VENDORS = {0x1D57}  # todos os produtos Xenta, nao so os PIDs ja conhecidos
 SKIP = {(0x1, 0x2), (0x1, 0x6)}  # mouse/teclado: o Windows nao permite ler
-NAMES = {0xFA60: "Receptor 2.4G", 0xFA55: "Mouse no cabo", 0x2155: "Mouse no cabo (variante)",
-         0xFA09: "Outro receptor (3554)"}
+NAMES = {0xFA60: "Receptor 2.4G", 0xFA55: "Mouse no cabo", 0x2155: "Mouse no cabo (variante)"}
 OFFICIAL_APP = "AttackShark.exe"
 
 # (titulo, instrucao, segundos de espera, pergunta para anotar)
@@ -95,7 +94,7 @@ class Recorder:
         prev = None
         while not self._stop.is_set():
             try:
-                devs = [d for d in enumerate_interfaces(IDS)
+                devs = [d for d in enumerate_interfaces(vendors=VENDORS)
                         if (d["usage_page"], d["usage"]) not in SKIP and d["input_len"] > 0]
             except OSError:
                 devs = []
@@ -232,14 +231,14 @@ class Wizard:
             self.lbl_app.config(text=("App oficial: ABERTO (interfere no teste)" if self.app_running
                                       else "App oficial: fechado  ✓"),
                                 fg="#c62828" if self.app_running else "#2e7d32")
-            devs = [NAMES.get(p, f"{p:04x}") for p in self.rec.present if p != 0xFA09]
+            devs = [NAMES.get(p, f"{p:04x}") for p in self.rec.present]
             self.lbl_devs.config(text="Conectado: " + (", ".join(devs) if devs else "nada"))
             if self.rec.last:
                 f, pid, t = self.rec.last
                 age = int(time.time() - t)
                 silent = age > 10
                 self.lbl_batt.config(
-                    text=f"{f.level}%  ·  {f.state_name}  ·  via {NAMES.get(pid, hex(pid))}  ·  "
+                    text=f"{f.level}%  ·  {f.state_code}  ·  via {NAMES.get(pid, hex(pid))}  ·  "
                          + (f"SEM SINAL ha {age}s" if silent else f"ha {age}s"),
                     fg="#999" if silent else "#222")
             else:
@@ -257,7 +256,7 @@ class Wizard:
         self.lbl_count.config(text="")
         self.lbl_title.config(text="Pronto! Obrigado.")
         self.lbl_text.config(text=f"Tudo foi gravado em:\n{os.path.normpath(self.path)}\n\n"
-                                  "Pode fechar esta janela e avisar no chat.")
+                                  "Pode fechar esta janela e anexar o arquivo numa issue no GitHub.")
         self.lbl_timer.config(text="")
         self.lbl_question.config(text="")
         self.note.pack_forget()

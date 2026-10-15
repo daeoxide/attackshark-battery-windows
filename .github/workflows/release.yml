@@ -1,0 +1,45 @@
+# Push a tag like v1.1.0 (matching attackshark_battery/__init__.py) to build the .exe
+# on GitHub's servers and publish it as a release, with its SHA-256 and the CHANGELOG notes.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt "pyinstaller>=6.10,<7" pytest
+      - name: Check tag matches the app version
+        shell: pwsh
+        run: |
+          $v = python -c "import attackshark_battery as a; print(a.__version__)"
+          if ("v$v" -ne "${{ github.ref_name }}") { throw "tag ${{ github.ref_name }} != app version $v" }
+      - name: Tests
+        run: python -m pytest -v tests
+      - name: Build .exe
+        run: python tools/build_exe.py
+      - name: Self-test the .exe
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath dist\AttackSharkBattery.exe -ArgumentList "--self-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "self-test of the .exe failed (exit $($p.ExitCode))" }
+      - name: Release notes
+        shell: pwsh
+        run: |
+          python tools/release_notes.py "${{ github.ref_name }}" dist/AttackSharkBattery.exe > notes.md
+          Get-Content notes.md
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/AttackSharkBattery.exe --title "${{ github.ref_name }}" --notes-file notes.md

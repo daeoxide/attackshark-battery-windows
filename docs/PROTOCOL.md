@@ -94,7 +94,7 @@ This is the counterpart of the "false zero" trap in the Linux project.
   which is typical of voltage-based estimation (surface charge). Earlier it fell about 6%/h around 80% ✅.
 - **On external power:** the level is **not a live measurement**. It stayed frozen at 85 on cable for 6 min, and at 92 or 100 on the dock.
   After removal it reads several points higher than before (85 on cable → 97 after unplugging) ✅.
-  Treat it as approximate. The app labels it "aprox." and does not trust it for a "full" notification.
+  Treat it as approximate. The app labels it "approx." and does not notify "full" by default.
 - The official software shows no number, only a bar. That bar looked like "80–90%" while this channel read 89% ✅ consistent.
 
 ### Sleep / off / Bluetooth
@@ -102,7 +102,7 @@ This is the counterpart of the "false zero" trap in the Linux project.
 | Situation | Receiver `fa60` | Status |
 |---|---|---|
 | 2.4G untouched for 6 min | keeps sending every 2 s (no sleep within 6 min) | ✅ |
-| 2.4G untouched ≥ 10 min / 30 min | sleep / deep sleep per the mouse settings (owner's config, factory default?). The tray app logs a `sem sinal` row when frames stop, to measure this | 🟡 |
+| 2.4G untouched ≥ 10 min / 30 min | sleep / deep sleep per the mouse settings (owner's config, factory default?). The tray app logs a `no_signal` row when frames stop, to measure this | 🟡 |
 | switch OFF, no cable, no dock | silent | ✅ |
 | switch OFF **on the dock** | **keeps sending** (`02`/`03`, level 100): the radio stays up while externally powered | ✅ |
 | BT (linked to another PC) | silent | ✅ |
@@ -127,6 +127,12 @@ It is unrelated to any mouse event.
 
 1. Meaning of byte 1 (`55` vs `E5`).
 2. Is there a distinct "full" state, e.g. a constant `02` at a real 100%? This needs a long charge from low to full on the dock.
-3. Does the receiver go silent at the 10 min sleep, or only at the 30 min deep sleep? The `sem sinal` rows in `battery_log.csv` will tell.
+3. Does the receiver go silent at the 10 min sleep, or only at the 30 min deep sleep? The `no_signal` rows in `battery_log.csv` will tell.
 4. In BT mode paired with *this* PC, does Windows show the battery natively (GATT Battery Service 0x180F)?
 5. Battery health: a full discharge curve from the history log, compared against the X11's rated runtime.
+
+## Other models
+
+The tray app does not depend on the X11 specifics above. It listens to any `1d57` product on usage page `0x0A` or a vendor page (`0xFF00`+), with input reports of 5 bytes or more.
+It accepts only the `03 MM 40 ST NN` frame, with any model byte, after the same value arrives twice in a row.
+For a model that behaves differently, *Report a problem* in the tray menu captures the device's HID collections and recent raw frames.

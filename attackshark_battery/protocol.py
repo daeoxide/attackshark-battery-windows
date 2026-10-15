@@ -22,21 +22,23 @@ FRAME_BATTERY = 0x40
 VENDOR_ID = 0x1D57
 BATTERY_USAGE_PAGE = 0x000A
 
-# pid -> descricao. O canal de bateria existe nos dois.
+# PIDs ja vistos. Outros PIDs do mesmo fabricante tambem sao escutados (ver monitor.py),
+# porque outros modelos/lotes podem usar outro PID com o mesmo protocolo.
 PRODUCTS = {
-    0xFA60: "receptor 2.4G",
-    0xFA55: "mouse no cabo (qualquer posicao da chave)",
-    0x2155: "mouse no cabo (outra variante, visto no projeto Linux)",
+    0xFA60: "2.4G receiver",
+    0xFA55: "mouse on USB cable",
+    0x2155: "mouse on USB cable (variant seen by the Linux project)",
 }
 
 STATE_BATTERY = 0x01
-STATE_POWERED = 0x02      # energia externa, carga pausada (LED verde no mouse)
-STATE_CHARGING = 0x03     # energia externa, carregando (LED roxo no mouse)
+STATE_POWERED = 0x02      # energia externa, carga pausada (LED verde no X11)
+STATE_CHARGING = 0x03     # energia externa, carregando (LED roxo no X11)
 
+# codigos neutros de idioma: vao para o CSV e servem de chave para a traducao (i18n.py)
 STATES = {
-    STATE_BATTERY: "na bateria",
-    STATE_POWERED: "na energia, carga pausada",
-    STATE_CHARGING: "carregando",
+    STATE_BATTERY: "battery",
+    STATE_POWERED: "powered",
+    STATE_CHARGING: "charging",
 }
 
 
@@ -53,13 +55,13 @@ class Frame:
         return self.state in (STATE_POWERED, STATE_CHARGING)
 
     @property
-    def state_name(self):
-        return STATES.get(self.state, f"desconhecido ({self.state:02x})")
+    def state_code(self):
+        return STATES.get(self.state, f"unknown_{self.state:02x}")
 
 
 def parse(data):
-    """Frame de bateria valido, ou None. Estados desconhecidos sao aceitos
-    (e registrados) para nao perder informacao de modelos diferentes."""
+    """Frame de bateria valido, ou None. O byte de modelo e estados desconhecidos sao
+    aceitos (e registrados) para nao perder informacao de modelos diferentes."""
     if len(data) < 5 or data[0] != REPORT_ID or data[2] != FRAME_BATTERY or data[4] > 100:
         return None
     return Frame(model_byte=data[1], state=data[3], level=data[4], raw=bytes(data[:5]))

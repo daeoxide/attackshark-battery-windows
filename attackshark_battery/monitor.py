@@ -1,18 +1,33 @@
 """Escuta o canal de bateria do receptor e do mouse no cabo, somente leitura."""
+import collections
 import threading
 import time
 
-from .hidread import ReadOnlyHid, enumerate_interfaces
 from .protocol import BATTERY_USAGE_PAGE, PRODUCTS, VENDOR_ID, parse
 
 RESCAN_SECONDS = 3
 CONFIRM_FRAMES = 2        # um valor so vale quando chega repetido (filtra o "01 64" de reconexao)
 FLAP_WINDOW = 60          # s
-FLAP_THRESHOLD = 4        # trocas bateria<->energia nesse intervalo = mau contato na dock/cabo
+FLAP_THRESHOLD = 4        # trocas bateria<->energia nesse intervalo = mau contato no cabo/dock
+
+
+def is_battery_candidate(d):
+    """Colecao que pode carregar o frame de bateria: a 0x0A conhecida ou uma vendor-defined
+    (outros modelos podem usar outra). Teclado/mouse padrao ficam de fora (o Windows nem deixa ler)."""
+    return (d["usage_page"] == BATTERY_USAGE_PAGE or d["usage_page"] >= 0xFF00) and d["input_len"] >= 5
+
+
+class _Source:
+    """Estado de filtragem de um dispositivo (receptor ou cabo)."""
+
+    def __init__(self):
+        self.pending = None        # (state, level) aguardando confirmacao
+        self.count = 0
+        self.last_raw_power = None
 
 
 class BatteryMonitor:
-    """Mantem a ultima leitura valida. on_frame(frame, pid) e chamado a cada frame."""
+    """Mantem a ultima leitura valida. on_frame(frame, pid) e chamado a cada frame aceito."""
 
     def __init__(self, on_frame=None):
         self.on_frame = on_frame
@@ -20,10 +35,10 @@ class BatteryMonitor:
         self.frame = None
         self.source_pid = None
         self.last_seen = 0.0
-        self.present = []          # pids com canal de bateria presentes agora
-        self._pending = None       # (state, level) aguardando confirmacao
-        self._pending_count = 0
-        self._last_raw_power = None
+        self.present = []          # pids com canal candidato presentes agora
+        self.devices = []          # colecoes candidatas (para o diagnostico)
+        self.recent = collections.deque(maxlen=12)   # (hora, pid, bytes crus) para o diagnostico
+        self._sources = {}
         self._power_flips = []     # horarios das trocas bateria<->energia (frames crus)
         self._active = set()
         self._stop = threading.Event()
@@ -35,7 +50,7 @@ class BatteryMonitor:
         self._stop.set()
 
     def flapping(self, now=None):
-        """True se o contato de energia esta oscilando (ex.: mouse mal encaixado na dock)."""
+        """True se o contato de energia esta oscilando (ex.: cabo frouxo, mouse mal encaixado na dock)."""
         now = time.time() if now is None else now
         with self.lock:
             self._power_flips = [t for t in self._power_flips if now - t <= FLAP_WINDOW]
@@ -46,15 +61,16 @@ class BatteryMonitor:
         `now` permite reprocessar capturas com o horario original."""
         now = time.time() if now is None else now
         with self.lock:
-            if self._last_raw_power is not None and f.on_power != self._last_raw_power:
+            src = self._sources.setdefault(pid, _Source())
+            if src.last_raw_power is not None and f.on_power != src.last_raw_power:
                 self._power_flips.append(now)
-            self._last_raw_power = f.on_power
+            src.last_raw_power = f.on_power
             key = (f.state, f.level)
-            if key == self._pending:
-                self._pending_count += 1
+            if key == src.pending:
+                src.count += 1
             else:
-                self._pending, self._pending_count = key, 1
-            if self._pending_count < CONFIRM_FRAMES:
+                src.pending, src.count = key, 1
+            if src.count < CONFIRM_FRAMES:
                 return False
             self.frame, self.source_pid, self.last_seen = f, pid, now
         if self.on_frame:
@@ -66,15 +82,16 @@ class BatteryMonitor:
             return self.frame, self.source_pid, self.last_seen, list(self.present)
 
     def _scan_loop(self):
-        ids = [(VENDOR_ID, pid) for pid in PRODUCTS]
+        from .hidread import enumerate_interfaces   # so existe no Windows; import tardio deixa testar a logica
+        known = [(VENDOR_ID, pid) for pid in PRODUCTS]
         while not self._stop.is_set():
             try:
-                devs = [d for d in enumerate_interfaces(ids)
-                        if d["usage_page"] == BATTERY_USAGE_PAGE and d["input_len"] > 0]
+                devs = [d for d in enumerate_interfaces(known, vendors={VENDOR_ID}) if is_battery_candidate(d)]
             except OSError:
                 devs = []
             with self.lock:
                 self.present = sorted({d["product_id"] for d in devs})
+                self.devices = devs
             for d in devs:
                 if d["path"] not in self._active:
                     self._active.add(d["path"])
@@ -82,12 +99,16 @@ class BatteryMonitor:
             self._stop.wait(RESCAN_SECONDS)
 
     def _read_loop(self, d):
+        from .hidread import ReadOnlyHid
         h = None
         try:
             h = ReadOnlyHid(d["path"], d["input_len"])
             while not self._stop.is_set():
-                f = parse(h.read())
+                data = h.read()
+                f = parse(data)
                 if f is not None:
+                    with self.lock:
+                        self.recent.append((time.time(), d["product_id"], data[:8]))
                     self.feed(f, d["product_id"])
         except OSError:
             pass  # dispositivo removido (cabo desconectado, receptor tirado)
