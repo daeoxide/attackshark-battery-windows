@@ -6,8 +6,7 @@ It also warns you before the battery runs out.
 Windows has no built-in way to show this, and the official software shows no percentage.
 The receiver does broadcast the level every ~2 s on a vendor HID channel, and this app listens to it.
 
-> Based on the protocol work of [Attack-Shark-Battery-KDE](https://gitlab.com/gabriel17166/Attack-Shark-Battery-KDE)
-> by Gabriel Marques Ferrarezi, the Linux tray app that first documented this channel.
+> Windows counterpart of [Attack-Shark-Battery-KDE](https://gitlab.com/gabriel17166/Attack-Shark-Battery-KDE) (Linux) by Gabriel Marques Ferrarezi, who first documented the battery protocol.
 
 *Português:* mostra a % de bateria do mouse Attack Shark na bandeja do Windows e avisa quando chegar em 20% / 10%.
 É somente leitura: não envia nada ao mouse.
