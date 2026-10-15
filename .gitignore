@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+config.json
+battery_log*.csv
+build/
+dist/
+*.spec

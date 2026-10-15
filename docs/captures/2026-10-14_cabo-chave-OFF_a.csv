@@ -1,0 +1,47 @@
+hora,evento,dispositivo,dados
+23:20:58,dispositivos,,1d57:fa55 USB Gaming Mouse | 1d57:fa60 2.4G Wireless Device | 3554:fa09 2.4G Wireless Receiver
+23:20:59,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:03,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x2
+23:21:03,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:09,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x3
+23:21:09,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:13,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x2
+23:21:13,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:17,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x2
+23:21:17,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:21,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x2
+23:21:21,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:23,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x1
+23:21:23,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:25,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x1
+23:21:25,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:27,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x1
+23:21:27,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:29,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x1
+23:21:29,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:33,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x2
+23:21:33,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:21:49,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x8
+23:21:49,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:21:55,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x3
+23:21:55,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:22:01,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x3
+23:22:01,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:22:03,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x1
+23:22:03,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:22:05,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x1
+23:22:05,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:22:09,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x2
+23:22:09,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:22:13,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x2
+23:22:13,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:22:17,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x2
+23:22:17,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:22:27,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x5
+23:22:27,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:22:35,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x4
+23:22:35,frame,1d57:fa55/if2/up000a,03 55 40 02 55
+23:22:41,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 02 55 x3
+23:22:41,frame,1d57:fa55/if2/up000a,03 55 40 03 55
+23:22:45,fim_repeticao,1d57:fa55/if2/up000a,03 55 40 03 55 x2
+23:22:45,frame,1d57:fa55/if2/up000a,03 55 40 02 55
