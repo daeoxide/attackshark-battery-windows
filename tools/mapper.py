@@ -16,10 +16,9 @@ from datetime import datetime
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 from attackshark_battery.hidread import ReadOnlyHid, enumerate_interfaces  # noqa: E402
 
-IDS = [(0x1D57, 0xFA60), (0x1D57, 0xFA55), (0x1D57, 0x2155), (0x3554, 0xFA09)]
+VENDORS = {0x1D57}  # todos os produtos Xenta, nao so os PIDs ja conhecidos
 SKIP = {(0x1, 0x2), (0x1, 0x6)}  # mouse/teclado: o Windows nao permite ler
-NAMES = {0xFA60: "receptor 2.4G (Xenta)", 0xFA55: "mouse no cabo", 0x2155: "mouse no cabo (variante)",
-         0xFA09: "receptor 2.4G (CompX)"}
+NAMES = {0xFA60: "receptor 2.4G", 0xFA55: "mouse no cabo", 0x2155: "mouse no cabo (variante)"}
 
 args = sys.argv[1:]
 minutes = float(args[0]) if args else 20
@@ -65,7 +64,7 @@ def listen(d, active):
 active, present = set(), None
 end = time.time() + minutes * 60
 while time.time() < end:
-    devs = [d for d in enumerate_interfaces(IDS)
+    devs = [d for d in enumerate_interfaces(vendors=VENDORS)
             if (d["usage_page"], d["usage"]) not in SKIP and d["input_len"] > 0]
     now = sorted({f"{d['vendor_id']:04x}:{d['product_id']:04x} {NAMES.get(d['product_id'], '')}" for d in devs})
     if now != present:

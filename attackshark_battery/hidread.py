@@ -109,17 +109,18 @@ def _caps(path):
         _k32.CloseHandle(h)
 
 
-def enumerate_interfaces(ids):
-    """Colecoes HID dos pares (vid, pid). Cada item: dict com path, vendor_id,
-    product_id, interface_number, collection, usage_page, usage e tamanhos de relatorio."""
-    wanted = set(ids)
+def enumerate_interfaces(ids=(), vendors=()):
+    """Colecoes HID dos pares (vid, pid) em `ids` e de qualquer produto dos VIDs em `vendors`.
+    Cada item: dict com path, vendor_id, product_id, interface_number, collection,
+    usage_page, usage e tamanhos de relatorio."""
+    wanted, vendors = set(ids), set(vendors)
     out = []
     for path in _interface_paths():
         m = _PATH_RE.search(path)
         if not m:
             continue
         vid, pid = int(m.group(1), 16), int(m.group(2), 16)
-        if (vid, pid) not in wanted:
+        if (vid, pid) not in wanted and vid not in vendors:
             continue
         try:
             caps = _caps(path)

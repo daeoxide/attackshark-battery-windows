@@ -1,7 +1,10 @@
 __pycache__/
 *.pyc
 config.json
+state.json
+icon.png
 battery_log*.csv
 build/
 dist/
 *.spec
+*.tmp
