@@ -1,0 +1,21 @@
+hora,evento,dispositivo,dados
+23:31:03,dispositivos,,1d57:fa55 mouse no cabo | 1d57:fa60 receptor 2.4G (Xenta) | 3554:fa09 receptor 2.4G (CompX)
+23:31:03,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55
+23:31:07,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55 x2
+23:31:07,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55
+23:31:11,etapa,,1  chave OFF  | cabo no PC          | parado
+23:31:13,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55 x3
+23:31:13,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55
+23:31:17,etapa,,2  chave 2.4G | cabo no PC          | mexa o mouse
+23:31:19,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55 x3
+23:31:19,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55
+23:31:23,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55 x2
+23:31:23,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55
+23:31:37,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55 x7
+23:31:37,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55
+23:31:39,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55 x1
+23:31:39,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55
+23:31:41,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55 x1
+23:31:41,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55
+23:31:43,fim_repeticao,1d57:fa55/MI02/COL03/up000a,03 55 40 03 55 x1
+23:31:43,frame,1d57:fa55/MI02/COL03/up000a,03 55 40 02 55

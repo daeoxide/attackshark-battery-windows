@@ -80,6 +80,12 @@ Cadence: a frame arrives about every 2 s, but repeated frames are irregular (2‚Ä
 - On the dock, `03` (charging) was reported for only ~1 min and then reverted to `01`, even though the dock LED kept blinking.
   Possible poor pogo-pin contact ‚ùì.
 
+## Caveat on the first captures
+
+The first captures (`docs/captures/*_app-oficial-aberto.csv`) were taken with the official
+Attack Shark software (`AttackShark.exe`, which bundles `hidapi.dll` and `hiddriver_*.dll`) running.
+That software talks to the device. Every finding above still has to be re-checked with it closed (TEST-PLAN step 0).
+
 ## Open questions ‚Üí see [TEST-PLAN.md](TEST-PLAN.md)
 
 1. Meaning of byte 1 (`55` vs `E5`).
@@ -90,5 +96,6 @@ Cadence: a frame arrives about every 2 s, but repeated frames are irregular (2‚Ä
 5. Does the dock (pogo pins) report `03` steadily once contact is good?
 6. How long until the mouse sleeps in 2.4G mode, and does the receiver go silent?
 7. Is there a full-charge state (a different ST, or `03` at 100)?
-8. In BT mode, does Windows show the battery natively through the GATT Battery Service (0x180F)?
+8. Does the official software change the frames (cadence, state `02`)? Compare with it open and closed.
+9. In BT mode, does Windows show the battery natively through the GATT Battery Service (0x180F)?
    Test by pairing BT with this PC.

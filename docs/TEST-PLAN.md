@@ -1,8 +1,10 @@
 # Test plan — mapping every mode
 
-Run `python tools/mapper.py --guided`. The tool shows each step. Press **Enter** once the mouse is in that state.
-Each step is marked in the capture CSV (`docs/captures/`).
-Wait about **60 s** per step, plus the extra time noted. When the mouse is on, move it a little during the step.
+Run `pythonw tools/test_wizard.pyw`. It opens a window that shows one step at a time, with a countdown and a live readout of what the PC sees.
+Each step and its answer note are written to the capture CSV in `docs/captures/`.
+
+**Close the official Attack Shark app first.** It talks to the mouse through its configuration channel, so it could change what we observe.
+The wizard checks that it is closed, and the last step reopens it for comparison.
 
 Everything is passive: the tool only listens on the battery collection (input-only), opened read-only.
 

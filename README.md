@@ -73,8 +73,9 @@ Settings are in `config.json`, which is created on first run:
 
 ## Tools
 
-- `python tools/mapper.py --guided` records every frame and every device change while it walks you through each mode
+- `pythonw tools/test_wizard.pyw` opens a window that walks you through every mode (cable, 2.4G, dock, BT, sleep) and records all frames
   (see [docs/TEST-PLAN.md](docs/TEST-PLAN.md)). Captures go to `docs/captures/`.
+- `python tools/mapper.py [minutes]` records freely from the console.
 - `python tests/test_readonly.py` and `python tests/test_protocol.py` run the checks.
 
 ## Credits

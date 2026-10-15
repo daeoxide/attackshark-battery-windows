@@ -4,7 +4,7 @@ Somente leitura (ver attackshark_battery/hidread.py). Grava em CSV cada mudanca 
 dispositivos presentes e cada frame distinto recebido, com horario e contagem.
 Uso:
   python tools/mapper.py [minutos] [saida.csv]   gravacao livre
-  python tools/mapper.py --guided                 roteiro do docs/TEST-PLAN.md, Enter a cada etapa
+Para o roteiro guiado com janela, use tools/test_wizard.pyw.
 """
 import csv
 import os
@@ -21,25 +21,10 @@ SKIP = {(0x1, 0x2), (0x1, 0x6)}  # mouse/teclado: o Windows nao permite ler
 NAMES = {0xFA60: "receptor 2.4G (Xenta)", 0xFA55: "mouse no cabo", 0x2155: "mouse no cabo (variante)",
          0xFA09: "receptor 2.4G (CompX)"}
 
-STEPS = [
-    "1  chave OFF  | cabo no PC          | parado",
-    "2  chave 2.4G | cabo no PC          | mexa o mouse",
-    "3  chave BT   | cabo no PC          | -",
-    "4  chave 2.4G | sem cabo            | mexa o mouse",
-    "5  chave 2.4G | sem cabo            | NAO TOQUE por 5 min",
-    "6  chave 2.4G | sem cabo            | mexa para acordar",
-    "7  chave 2.4G | na dock (encaixe firme) | espere 3 min",
-    "8  chave OFF  | na dock             | espere 2 min",
-    "9  chave OFF  | sem cabo, sem dock  | -",
-    "10 chave BT1  | usando no outro PC  | -",
-    "11 chave BT2  | pareado com ESTE PC (opcional) | veja Configuracoes > Bluetooth",
-    "12 chave 2.4G | sem cabo            | uso normal",
-]
-guided = "--guided" in sys.argv
-args = [a for a in sys.argv[1:] if a != "--guided"]
-minutes = float(args[0]) if args else (180 if guided else 20)
+args = sys.argv[1:]
+minutes = float(args[0]) if args else 20
 default_out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "captures",
-                           datetime.now().strftime("%Y-%m-%d_%H%M_") + ("guiado" if guided else "livre") + ".csv")
+                           datetime.now().strftime("%Y-%m-%d_%H%M_") + "livre.csv")
 out = args[1] if len(args) > 1 else default_out
 lock = threading.Lock()
 f = open(out, "w", newline="", encoding="utf-8")
@@ -51,8 +36,7 @@ def emit(evento, disp, dados=""):
     with lock:
         w.writerow([datetime.now().strftime("%H:%M:%S"), evento, disp, dados])
         f.flush()
-        if not guided or evento in ("dispositivos", "etapa"):
-            print(f"   [{evento}] {disp} {dados}", flush=True)
+        print(f"   [{evento}] {disp} {dados}", flush=True)
 
 
 def tag(d):
@@ -77,21 +61,6 @@ def listen(d, active):
     finally:
         active.discard(d["path"])
 
-
-def guide():
-    print()
-    print("Roteiro guiado. Coloque o mouse no estado indicado e aperte Enter.")
-    print()
-    for step in STEPS:
-        input(f">>> {step}   [Enter quando estiver assim] ")
-        emit("etapa", "", step)
-    input("Fim do roteiro. Enter para encerrar a gravacao. ")
-    emit("fim", "", "")
-    os._exit(0)
-
-
-if guided:
-    threading.Thread(target=guide, daemon=True).start()
 
 active, present = set(), None
 end = time.time() + minutes * 60
