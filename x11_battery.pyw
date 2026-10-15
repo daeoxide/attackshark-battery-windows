@@ -26,7 +26,8 @@ DEFAULT_CONFIG = {
     "warn_percent": 20,
     "critical_percent": 10,
     "repeat_minutes": 10,
-    "notify_full": True,
+    "notify_full": False,   # o % com energia externa nao e confiavel (docs/PROTOCOL.md)
+    "notify_bad_contact": True,
     "sleep_after_seconds": 30,
 }
 
@@ -119,7 +120,8 @@ def tooltip(frame, pid, asleep, age, present):
         return "Mouse: aguardando leitura (mexa o mouse)"
     if asleep:
         return f"Mouse: {frame.level}% (ultima leitura ha {int(age // 60)} min - dormindo, BT ou desligado)"
-    return f"Mouse: {frame.level}% - {frame.state_name} - via {PRODUCTS.get(pid, hex(pid))}"
+    approx = " (aprox. na energia)" if frame.on_power else ""
+    return f"Mouse: {frame.level}%{approx} - {frame.state_name}"
 
 
 def notify(title, msg, loud=False):
@@ -137,7 +139,12 @@ def ui_loop(icon):
     warned_level = None
     full_notified = False
     last_render = None
+    last_flap_notify = 0.0
     while not stop.is_set():
+        if cfg.get("notify_bad_contact", True) and monitor.flapping()                 and time.time() - last_flap_notify > 300:
+            notify("Mau contato na dock",
+                   "O carregamento esta ligando e desligando. Reencaixe o mouse ou limpe os contatos.")
+            last_flap_notify = time.time()
         frame, pid, seen, present = monitor.snapshot()
         age = time.time() - seen if seen else 0
         asleep = frame is not None and age > cfg["sleep_after_seconds"]

@@ -6,6 +6,9 @@ from .hidread import ReadOnlyHid, enumerate_interfaces
 from .protocol import BATTERY_USAGE_PAGE, PRODUCTS, VENDOR_ID, parse
 
 RESCAN_SECONDS = 3
+CONFIRM_FRAMES = 2        # um valor so vale quando chega repetido (filtra o "01 64" de reconexao)
+FLAP_WINDOW = 60          # s
+FLAP_THRESHOLD = 4        # trocas bateria<->energia nesse intervalo = mau contato na dock/cabo
 
 
 class BatteryMonitor:
@@ -18,6 +21,10 @@ class BatteryMonitor:
         self.source_pid = None
         self.last_seen = 0.0
         self.present = []          # pids com canal de bateria presentes agora
+        self._pending = None       # (state, level) aguardando confirmacao
+        self._pending_count = 0
+        self._last_raw_power = None
+        self._power_flips = []     # horarios das trocas bateria<->energia (frames crus)
         self._active = set()
         self._stop = threading.Event()
 
@@ -26,6 +33,33 @@ class BatteryMonitor:
 
     def stop(self):
         self._stop.set()
+
+    def flapping(self, now=None):
+        """True se o contato de energia esta oscilando (ex.: mouse mal encaixado na dock)."""
+        now = time.time() if now is None else now
+        with self.lock:
+            self._power_flips = [t for t in self._power_flips if now - t <= FLAP_WINDOW]
+            return len(self._power_flips) >= FLAP_THRESHOLD
+
+    def feed(self, f, pid, now=None):
+        """Processa um frame ja decodificado. Retorna True se virou a leitura oficial.
+        `now` permite reprocessar capturas com o horario original."""
+        now = time.time() if now is None else now
+        with self.lock:
+            if self._last_raw_power is not None and f.on_power != self._last_raw_power:
+                self._power_flips.append(now)
+            self._last_raw_power = f.on_power
+            key = (f.state, f.level)
+            if key == self._pending:
+                self._pending_count += 1
+            else:
+                self._pending, self._pending_count = key, 1
+            if self._pending_count < CONFIRM_FRAMES:
+                return False
+            self.frame, self.source_pid, self.last_seen = f, pid, now
+        if self.on_frame:
+            self.on_frame(f, pid)
+        return True
 
     def snapshot(self):
         with self.lock:
@@ -53,12 +87,8 @@ class BatteryMonitor:
             h = ReadOnlyHid(d["path"], d["input_len"])
             while not self._stop.is_set():
                 f = parse(h.read())
-                if f is None:
-                    continue
-                with self.lock:
-                    self.frame, self.source_pid, self.last_seen = f, d["product_id"], time.time()
-                if self.on_frame:
-                    self.on_frame(f, d["product_id"])
+                if f is not None:
+                    self.feed(f, d["product_id"])
         except OSError:
             pass  # dispositivo removido (cabo desconectado, receptor tirado)
         finally:

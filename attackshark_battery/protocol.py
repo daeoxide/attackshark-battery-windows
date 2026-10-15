@@ -11,6 +11,8 @@ de 5 bytes na colecao HID de usage page 0x000A (interface 02):
     +-------------- report ID
 
 Frames com byte 2 != 0x40 (ex.: 03 MM 01 00 00 quando o enlace pisca) nao sao bateria.
+Toda vez que o mouse (re)conecta ao receptor ele manda um frame isolado 03 MM 40 01 64
+("100% falso") antes do nivel real - por isso o monitor so aceita um valor repetido.
 Detalhes e itens ainda em aberto: docs/PROTOCOL.md.
 """
 from dataclasses import dataclass
@@ -23,17 +25,17 @@ BATTERY_USAGE_PAGE = 0x000A
 # pid -> descricao. O canal de bateria existe nos dois.
 PRODUCTS = {
     0xFA60: "receptor 2.4G",
-    0xFA55: "mouse no cabo (chave em OFF)",
+    0xFA55: "mouse no cabo (qualquer posicao da chave)",
     0x2155: "mouse no cabo (outra variante, visto no projeto Linux)",
 }
 
 STATE_BATTERY = 0x01
-STATE_CABLE_IDLE = 0x02   # hipotese: no cabo, sem corrente de carga no momento
-STATE_CHARGING = 0x03
+STATE_POWERED = 0x02      # energia externa, carga pausada (LED verde no mouse)
+STATE_CHARGING = 0x03     # energia externa, carregando (LED roxo no mouse)
 
 STATES = {
     STATE_BATTERY: "na bateria",
-    STATE_CABLE_IDLE: "no cabo (02)",
+    STATE_POWERED: "na energia, carga pausada",
     STATE_CHARGING: "carregando",
 }
 
@@ -48,7 +50,7 @@ class Frame:
     @property
     def on_power(self):
         """Mouse recebendo energia externa (cabo ou dock)."""
-        return self.state in (STATE_CABLE_IDLE, STATE_CHARGING)
+        return self.state in (STATE_POWERED, STATE_CHARGING)
 
     @property
     def state_name(self):

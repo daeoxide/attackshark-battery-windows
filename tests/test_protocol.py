@@ -16,6 +16,22 @@ def test_frames():
     assert parse(b"\x03\x55") is None
 
 
+def test_monitor_filters_reconnect_frame_and_detects_flapping():
+    from attackshark_battery.monitor import BatteryMonitor
+    m = BatteryMonitor()
+    seq = ["0355400164", "0355400161", "0355400161"]       # 100% falso de reconexao, depois 97 real
+    accepted = [m.feed(parse(bytes.fromhex(h)), 0xFA60) for h in seq]
+    assert accepted == [False, False, True] and m.frame.level == 97
+    assert not m.flapping()
+    # captura real da dock com mau contato (2026-10-14 23:49)
+    for h in ["0355400157", "0355400355", "0355400164", "0355400153", "0355400353", "0355400164",
+              "0355400356"]:
+        m.feed(parse(bytes.fromhex(h)), 0xFA60)
+    assert m.flapping()
+
+
 if __name__ == "__main__":
     test_frames()
     print("OK test_frames")
+    test_monitor_filters_reconnect_frame_and_detects_flapping()
+    print("OK test_monitor_filters_reconnect_frame_and_detects_flapping")

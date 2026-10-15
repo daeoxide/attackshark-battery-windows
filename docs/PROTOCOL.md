@@ -7,23 +7,28 @@ by Gabriel Marques Ferrarezi, which documented the `03 E5 40 ST NN` frame for Li
 
 Status legend: ✅ confirmed by capture · 🟡 hypothesis · ❓ open
 
+Main capture: [`captures/2026-10-14_2335_assistente.csv`](captures/2026-10-14_2335_assistente.csv).
+It covers 13 guided steps, starts with the official software closed, and includes the user's notes for each step.
+
 ## Device tested
 
 | Item | Value |
 |---|---|
 | Mouse | Attack Shark X11 (with magnetic charging dock) |
-| Mode switch | `2.4G` · `OFF` (works wired over USB-C when OFF) · `BT` (BT1 / BT2) |
+| Mode switch | `2.4G` · `OFF` · `BT` (BT1 / BT2 selected on the mouse) |
+| Mouse LED on external power | purple = charging, green = powered, not charging (user observation) |
 | OS | Windows 11 Pro 26200 |
 
 ## USB identities
 
 | VID:PID | Product string | When it appears | Status |
 |---|---|---|---|
-| `1d57:fa60` | 2.4G Wireless Device | 2.4G receiver plugged in (always, even with the mouse off) | ✅ |
-| `1d57:fa55` | USB Gaming Mouse | mouse connected by USB-C cable | ✅ (switch at OFF) |
-| `1d57:2155` | — | wired mouse in the Linux project (different model/batch?) | reported upstream |
+| `1d57:fa60` | 2.4G Wireless Device | 2.4G receiver plugged in, whether or not the mouse is on | ✅ |
+| `1d57:fa55` | USB Gaming Mouse | mouse on the USB-C cable, **whatever the switch position** (OFF, 2.4G or BT) | ✅ |
+| `1d57:2155` | — | wired mouse in the Linux project (different model or batch?) | reported upstream |
 
-❓ Does `fa55` also appear with the cable plugged in while the switch is at 2.4G or BT?
+✅ The **cable always wins**. At any switch position the mouse works wired and reports its battery through `fa55`.
+The receiver `fa60` stays silent meanwhile.
 
 ## HID collections (identical layout on `fa60` and `fa55`)
 
@@ -36,15 +41,13 @@ Read from the descriptor cached by Windows (`HidP_GetCaps`), not from the device
 | MI_02 | COL01 | 0x01 / 0x80 System Control | 2 | 0 | 0 | power keys |
 | MI_02 | COL02 | 0x0C / 0x01 Consumer | 3 | 0 | 0 | media keys |
 | MI_02 | **COL03** | **0x0A / 0x00** | **5** | 0 | 0 | **battery channel (push only)** ✅ |
-| MI_02 | COL04 | 0x0B / 0x00 | 0 | 0 | 134 (`fa60`) / 262 (`fa55`) | configuration channel used by the vendor driver 🟡 |
+| MI_02 | COL04 | 0x0B / 0x00 | 0 | 0 | 134 (`fa60`) / 262 (`fa55`) | configuration channel used by the vendor software 🟡 |
 | MI_03 | — | 0x01 / 0x06 Keyboard | 15 (`fa60`) / 8 (`fa55`) | 0 | 0 | — |
 
 Notes:
 - The battery collection has **no output and no feature reports**. It can only flow from device to host.
-  Reading it cannot change any setting on the mouse.
-- COL04 is feature-only. Opening it for reading fails with a read error, which is expected.
-  This project **never opens it**. It is the path a configuration tool would use to write DPI, polling rate and similar settings.
-- The usage pages 0x0A (Ordinal) and 0x0B (Telephony) are reused by the vendor as private channels.
+- COL04 is feature-only, so reading it gives a read error. This project never opens it.
+- The vendor reuses usage pages 0x0A (Ordinal) and 0x0B (Telephony) as private channels.
 
 ## Battery frame
 
@@ -55,47 +58,74 @@ Notes:
 | Byte | Meaning | Status |
 |---|---|---|
 | 0 | Report ID `0x03` | ✅ |
-| 1 | `0x55` on this X11; `0xE5` on the Linux project's mouse. Constant per device. Model or firmware marker? | ✅ value / ❓ meaning |
-| 2 | Frame type: `0x40` = battery. `0x01` = link-blink frame (`03 MM 01 00 00`), which must be ignored | ✅ / reported upstream |
-| 3 | State (table below) | partial |
+| 1 | `0x55` on this X11, `0xE5` on the Linux project's mouse. Constant per device. Model or firmware marker? | ✅ value / ❓ meaning |
+| 2 | Frame type: `0x40` = battery. `0x01` = link-blink frame (`03 MM 01 00 00`, reported upstream, never seen here) | ✅ |
+| 3 | State (table below) | ✅ |
 | 4 | Level 0–100 (%) | ✅ |
 
-Cadence: a frame arrives about every 2 s, but repeated frames are irregular (2–6 s apart) ✅.
+Cadence: one frame **every 2 s**, sent whenever the mouse is powered and linked ✅.
+That covers on battery, on cable and on the dock. Opening the official software does not change it ✅.
 
 ### State byte
 
-| ST | Seen when | Interpretation | Status |
+| ST | Meaning | Evidence | Status |
 |---|---|---|---|
-| `01` | 2.4G, mouse in use, no cable or dock | on battery | ✅ |
-| `03` | 2.4G on dock; wired (switch OFF) | external power, charging | ✅ |
-| `02` | wired, switch OFF; alternates with `03` every 2–4 s | 🟡 external power, charge current paused (CV phase / trickle?) | 🟡 |
+| `01` | on battery | every wireless step | ✅ |
+| `02` | external power, **not charging** (charge paused / topped-off) | matches the green LED. Dominant on cable at 85% and on the dock once settled | ✅ (LED match) |
+| `03` | external power, **charging** | matches the purple LED | ✅ (LED match) |
 
-## Level accuracy (observed behaviour)
+On external power the mouse **alternates `02` and `03`** every 2–20 s, with `02` dominating. This looks like a charger in its top-off phase.
+The same pattern shows on cable and on dock ✅.
 
-- During normal 2.4G use the level falls about 6%/h (84 → 76 over 78 min) ✅.
-- Right after plugging or unplugging power the number jumps ✅. Examples: 72 → 100 within 1 min on cable;
-  100 → 87 → 84 → 82 → 100 → 79 within ~80 s after removal.
-  This suggests the level is derived from cell voltage, which jumps under charge voltage.
-  It is also consistent with a worn cell (voltage sag under load) 🟡.
-- On the dock, `03` (charging) was reported for only ~1 min and then reverted to `01`, even though the dock LED kept blinking.
-  Possible poor pogo-pin contact ❓.
+### ⚠ Spurious "100%" frame on (re)connection
 
-## Caveat on the first captures
+**Every time** the mouse links to the receiver, it sends one isolated `03 MM 40 01 64` frame ("on battery, 100%") ✅.
+This happens when the mouse wakes, the switch passes through 2.4G, it is lifted from the dock, or dock contact bounces.
+The real level follows 2 s later.
 
-The first captures (`docs/captures/*_app-oficial-aberto.csv`) were taken with the official
-Attack Shark software (`AttackShark.exe`, which bundles `hidapi.dll` and `hiddriver_*.dll`) running.
-That software talks to the device. Every finding above still has to be re-checked with it closed (TEST-PLAN step 0).
+Seen 7 times in one session, always a single frame: 23:41:44, 23:49:14, 23:49:22, 23:49:43, 23:53:32, 23:56:36, 00:00:17 and 00:01:32.
 
-## Open questions → see [TEST-PLAN.md](TEST-PLAN.md)
+**Handling:** only accept a `(state, level)` pair after it arrives **twice in a row**.
+This is the counterpart of the "false zero" trap in the Linux project.
+
+### Level accuracy
+
+- **On battery:** monotonic and plausible. Right after charging it fell 97 → 90 in about 8 min,
+  which is typical of voltage-based estimation (surface charge). Earlier it fell about 6%/h around 80% ✅.
+- **On external power:** the level is **not a live measurement**. It stayed frozen at 85 on cable for 6 min, and at 92 or 100 on the dock.
+  After removal it reads several points higher than before (85 on cable → 97 after unplugging) ✅.
+  Treat it as approximate. The app labels it "aprox." and does not trust it for a "full" notification.
+- The official software shows no number, only a bar. That bar looked like "80–90%" while this channel read 89% ✅ consistent.
+
+### Sleep / off / Bluetooth
+
+| Situation | Receiver `fa60` | Status |
+|---|---|---|
+| 2.4G untouched for 6 min | keeps sending every 2 s (no sleep within 6 min) | ✅ |
+| switch OFF, no cable, no dock | silent | ✅ |
+| switch OFF **on the dock** | **keeps sending** (`02`/`03`, level 100): the radio stays up while externally powered | ✅ |
+| BT (linked to another PC) | silent | ✅ |
+| switching through positions | spurious `01 64` + one real frame | ✅ |
+
+Silence means the mouse is off or in BT mode. It never means 0%.
+
+### Dock contact
+
+At the start of the dock step the stream flapped between `01` and `03` seven times in 30 s.
+The user confirmed they had to press the mouse down for the LED to turn purple, which points to **poor pogo-pin contact** ✅.
+The app detects this pattern (≥ 4 battery ↔ power changes within 60 s) and shows a notification.
+Replaying the capture flags exactly that minute and nothing else.
+
+## Other devices seen
+
+`3554:fa09` is a second 2.4G receiver (CompX), not part of the mouse. Its vendor collection `ff02` sent
+`13 0a 01 00 04 02 0X 00 … 2X` at irregular intervals (minutes), with byte 6 toggling between 00 and 01.
+It is unrelated to any mouse event ❓ (probably a keyboard).
+
+## Open questions
 
 1. Meaning of byte 1 (`55` vs `E5`).
-2. Meaning of state `02`. Does `02`/`03` alternation also happen on the dock? Does `02` mean "full"?
-3. What does the receiver `fa60` send in BT mode, with the switch at OFF and no cable, and while the mouse sleeps?
-   Silence? Link-blink frames?
-4. Does the cable carry data at the 2.4G and BT positions, or only power?
-5. Does the dock (pogo pins) report `03` steadily once contact is good?
-6. How long until the mouse sleeps in 2.4G mode, and does the receiver go silent?
-7. Is there a full-charge state (a different ST, or `03` at 100)?
-8. Does the official software change the frames (cadence, state `02`)? Compare with it open and closed.
-9. In BT mode, does Windows show the battery natively through the GATT Battery Service (0x180F)?
-   Test by pairing BT with this PC.
+2. Is there a distinct "full" state, e.g. a constant `02` at a real 100%? This needs a long charge from low to full on the dock.
+3. Sleep timeout in 2.4G mode: is it longer than 6 min? Does the receiver go silent then?
+4. In BT mode paired with *this* PC, does Windows show the battery natively (GATT Battery Service 0x180F)?
+5. Battery health: a full discharge curve from the history log, compared against the X11's rated runtime.
