@@ -102,6 +102,7 @@ This is the counterpart of the "false zero" trap in the Linux project.
 | Situation | Receiver `fa60` | Status |
 |---|---|---|
 | 2.4G untouched for 6 min | keeps sending every 2 s (no sleep within 6 min) | ✅ |
+| 2.4G untouched ≥ 10 min / 30 min | sleep / deep sleep per the mouse settings (owner's config, factory default?). The tray app logs a `sem sinal` row when frames stop, to measure this | 🟡 |
 | switch OFF, no cable, no dock | silent | ✅ |
 | switch OFF **on the dock** | **keeps sending** (`02`/`03`, level 100): the radio stays up while externally powered | ✅ |
 | BT (linked to another PC) | silent | ✅ |
@@ -118,14 +119,14 @@ Replaying the capture flags exactly that minute and nothing else.
 
 ## Other devices seen
 
-`3554:fa09` is a second 2.4G receiver (CompX), not part of the mouse. Its vendor collection `ff02` sent
+`3554:fa09` is the owner's wireless **keyboard** receiver (CompX), not part of the mouse. Its vendor collection `ff02` sent
 `13 0a 01 00 04 02 0X 00 … 2X` at irregular intervals (minutes), with byte 6 toggling between 00 and 01.
-It is unrelated to any mouse event ❓ (probably a keyboard).
+It is unrelated to any mouse event.
 
 ## Open questions
 
 1. Meaning of byte 1 (`55` vs `E5`).
 2. Is there a distinct "full" state, e.g. a constant `02` at a real 100%? This needs a long charge from low to full on the dock.
-3. Sleep timeout in 2.4G mode: is it longer than 6 min? Does the receiver go silent then?
+3. Does the receiver go silent at the 10 min sleep, or only at the 30 min deep sleep? The `sem sinal` rows in `battery_log.csv` will tell.
 4. In BT mode paired with *this* PC, does Windows show the battery natively (GATT Battery Service 0x180F)?
 5. Battery health: a full discharge curve from the history log, compared against the X11's rated runtime.

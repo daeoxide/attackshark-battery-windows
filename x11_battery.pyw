@@ -51,6 +51,25 @@ _log_lock = threading.Lock()
 _last_logged = None
 
 
+def migrate_old_log():
+    """Logs de versoes antigas (outro cabecalho) sao preservados com sufixo _v1."""
+    if not os.path.exists(LOG_PATH):
+        return
+    with open(LOG_PATH, encoding="utf-8") as f:
+        header = f.readline().strip()
+    if header != ",".join(LOG_HEADER):
+        os.replace(LOG_PATH, LOG_PATH.replace(".csv", "_v1.csv"))
+
+
+def write_log(row):
+    new = not os.path.exists(LOG_PATH)
+    with open(LOG_PATH, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if new:
+            w.writerow(LOG_HEADER)
+        w.writerow([datetime.now().isoformat(timespec="seconds")] + row)
+
+
 def log_frame(frame, pid):
     """Grava no CSV quando nivel, estado ou fonte mudam."""
     global _last_logged
@@ -59,18 +78,15 @@ def log_frame(frame, pid):
         if key == _last_logged:
             return
         _last_logged = key
-        if os.path.exists(LOG_PATH):
-            with open(LOG_PATH, encoding="utf-8") as f:
-                if f.readline().strip() != ",".join(LOG_HEADER):
-                    f.close()
-                    os.replace(LOG_PATH, LOG_PATH.replace(".csv", "_v1.csv"))
-        new = not os.path.exists(LOG_PATH)
-        with open(LOG_PATH, "a", newline="", encoding="utf-8") as f:
-            w = csv.writer(f)
-            if new:
-                w.writerow(LOG_HEADER)
-            w.writerow([datetime.now().isoformat(timespec="seconds"), frame.level,
-                        frame.state_name, f"{pid:04x}", frame.raw.hex(" ")])
+        write_log([frame.level, frame.state_name, f"{pid:04x}", frame.raw.hex(" ")])
+
+
+def log_silence():
+    """Mouse parou de falar (dormiu, desligou ou foi para BT). Ajuda a medir o tempo de sono."""
+    global _last_logged
+    with _log_lock:
+        _last_logged = None   # a proxima leitura e gravada mesmo se igual a anterior
+        write_log(["", "sem sinal", "", ""])
 
 
 monitor = BatteryMonitor(on_frame=log_frame)
@@ -140,6 +156,7 @@ def ui_loop(icon):
     full_notified = False
     last_render = None
     last_flap_notify = 0.0
+    was_asleep = False
     while not stop.is_set():
         if cfg.get("notify_bad_contact", True) and monitor.flapping()                 and time.time() - last_flap_notify > 300:
             notify("Mau contato na dock",
@@ -150,6 +167,9 @@ def ui_loop(icon):
         asleep = frame is not None and age > cfg["sleep_after_seconds"]
         pct = frame.level if frame else None
         on_power = bool(frame and frame.on_power)
+        if asleep and not was_asleep:
+            log_silence()
+        was_asleep = asleep
 
         render = (pct, on_power, asleep)
         if render != last_render:
@@ -196,7 +216,18 @@ def quit_app(icon, item):
     icon.stop()
 
 
+def already_running():
+    """Mutex nomeado: impede duas copias na bandeja (ex.: inicializacao + manual)."""
+    import ctypes
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    main.mutex = k32.CreateMutexW(None, False, r"Local\AttackSharkBatteryTray")
+    return ctypes.get_last_error() == 183  # ERROR_ALREADY_EXISTS
+
+
 def main():
+    if already_running():
+        return
+    migrate_old_log()
     icon = pystray.Icon(
         "attackshark_battery", make_icon(None, False, False), "Mouse: iniciando...",
         menu=pystray.Menu(
