@@ -3,8 +3,10 @@
 Protocolo: attackshark_battery/protocol.py e docs/PROTOCOL.md.
 """
 import csv
+import ctypes
 import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -17,7 +19,13 @@ from winotify import Notification, audio
 from attackshark_battery.monitor import BatteryMonitor
 from attackshark_battery.protocol import PRODUCTS
 
-BASE = os.path.dirname(os.path.abspath(__file__))
+FROZEN = getattr(sys, "frozen", False)  # rodando como .exe (PyInstaller)
+# O .exe pode estar em Downloads ou Program Files: config e historico vao para o perfil do usuario.
+BASE = (os.path.join(os.environ["LOCALAPPDATA"], "AttackSharkBattery") if FROZEN
+        else os.path.dirname(os.path.abspath(__file__)))
+os.makedirs(BASE, exist_ok=True)
+STARTUP_LNK = os.path.join(os.environ["APPDATA"], r"Microsoft\Windows\Start Menu\Programs\Startup",
+                           "Attack Shark Battery.lnk")
 CONFIG_PATH = os.path.join(BASE, "config.json")
 LOG_PATH = os.path.join(BASE, "battery_log.csv")
 LOG_HEADER = ["data_hora", "percent", "estado", "fonte", "frame"]
@@ -205,6 +213,31 @@ def open_path(path):
     return lambda icon, item: os.path.exists(path) and os.startfile(path)
 
 
+def launch_command():
+    """(alvo, argumentos) para iniciar este app: o proprio .exe, ou pythonw + script."""
+    if FROZEN:
+        return sys.executable, ""
+    pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+    return pythonw, f'"{os.path.abspath(__file__)}"'
+
+
+def startup_enabled(item=None):
+    return os.path.exists(STARTUP_LNK)
+
+
+def toggle_startup(icon, item):
+    if startup_enabled():
+        os.remove(STARTUP_LNK)
+        return
+    target, args = launch_command()
+    workdir = os.path.dirname(target if FROZEN else os.path.abspath(__file__))
+    ps = ("$s=(New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK);"
+          "$s.TargetPath=$env:TGT;$s.Arguments=$env:ARGS;$s.WorkingDirectory=$env:WD;$s.Save()")
+    env = dict(os.environ, LNK=STARTUP_LNK, TGT=target, ARGS=args, WD=workdir)
+    subprocess.run(["powershell", "-NoProfile", "-Command", ps], env=env,
+                   creationflags=0x08000000, check=False)
+
+
 def reload_config(icon, item):
     global cfg
     cfg = load_config()
@@ -218,7 +251,6 @@ def quit_app(icon, item):
 
 def already_running():
     """Mutex nomeado: impede duas copias na bandeja (ex.: inicializacao + manual)."""
-    import ctypes
     k32 = ctypes.WinDLL("kernel32", use_last_error=True)
     main.mutex = k32.CreateMutexW(None, False, r"Local\AttackSharkBatteryTray")
     return ctypes.get_last_error() == 183  # ERROR_ALREADY_EXISTS
@@ -234,6 +266,8 @@ def main():
             pystray.MenuItem("Abrir historico (CSV)", open_path(LOG_PATH)),
             pystray.MenuItem("Editar config", open_path(CONFIG_PATH)),
             pystray.MenuItem("Recarregar config", reload_config),
+            pystray.MenuItem("Iniciar com o Windows", toggle_startup, checked=startup_enabled),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Sair", quit_app),
         ))
     monitor.start()

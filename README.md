@@ -56,17 +56,31 @@ Full protocol notes: **[docs/PROTOCOL.md](docs/PROTOCOL.md)**.
 
 ## Install
 
+### Option 1: download the .exe (no Python needed)
+
+1. Download `AttackSharkBattery.exe` from the [latest release](https://github.com/daeoxide/attackshark-battery-windows/releases/latest).
+2. Run it. The icon appears next to the clock.
+3. Right-click the icon and tick **Iniciar com o Windows** to start it with Windows.
+
+Windows SmartScreen may warn about an unknown publisher, because the file is not code-signed.
+Click **More info → Run anyway**. You can also build the .exe yourself from source (see below).
+Settings and history live in `%LOCALAPPDATA%\AttackSharkBattery`.
+
+### Option 2: run from source
+
 Requires Python 3.10+ on Windows 10/11.
 
 ```powershell
 git clone https://github.com/daeoxide/attackshark-battery-windows
 cd attackshark-battery-windows
-pip install -r requirements.txt
-pythonw x11_battery.pyw
+powershell -ExecutionPolicy Bypass -File install.ps1
 ```
 
-**Start with Windows:** press `Win+R`, open `shell:startup`, and create a shortcut there to
-`pythonw.exe "<path>\x11_battery.pyw"`.
+`install.ps1` installs the dependencies, runs the read-only check, adds a shortcut in `shell:startup` and starts the app.
+To do it by hand instead, run `pip install -r requirements.txt` and then `pythonw x11_battery.pyw`.
+Only one copy runs at a time.
+
+To build the .exe yourself: `pip install pyinstaller`, then `python tools/build_exe.py`. The output is `dist/AttackSharkBattery.exe`.
 
 Settings are in `config.json`, which is created on first run:
 
