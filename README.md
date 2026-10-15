@@ -20,7 +20,8 @@ The receiver does broadcast the level every ~2 s on a vendor HID channel, and th
 - **Toast notifications:**
   - at 20%, repeated every 10 min until charging
   - at 10%, with an alarm sound
-  - optionally at 100%
+  - when the dock contact is bad (charging keeps switching on and off)
+  - optionally at 100% (off by default: the level is approximate while on external power)
 - **Works over the 2.4G receiver and over the USB-C cable.**
 - **History file** (`battery_log.csv`): every change of level or state, with the raw frame. Useful for spotting a worn battery.
 - **No drivers, no admin rights, and no hidapi.** Uses only Windows APIs through `ctypes`.
